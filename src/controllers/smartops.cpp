@@ -19,7 +19,7 @@ bool MyHomeNew::SmartOps::handle(ESP8266WebServer& server, HTTPMethod requestMet
   if(requestMethod == HTTP_GET) {
     return handleGet(server, requestMethod, requestUri);
   }
-  
+
   return handleDisallowedMethods(server, requestMethod, requestUri);
 }
 
@@ -33,18 +33,26 @@ bool MyHomeNew::SmartOps::handleGet(ESP8266WebServer& server, HTTPMethod request
   String device = server.arg("dev");
   String state = server.arg("state");
 
-  bool viaLabel = true;
-  if(Utils::isInt(device)) {
-    viaLabel = false;
+  if(!Utils::isInt(device)) {
+    server.send(400);
+    return true;
   }
 
-  if(!viaLabel) {
-    Capabilities::setState(device.toInt(), state == "on");
-    server.send(202);
+  // Get mode
+  if(state == "") {
+    String curState = Capabilities::getState(device.toInt()) ? "on" : "off";
+    String resp = "{";
+    resp += "\"dev\":\"" + device + "\",";
+    resp += "\"state\":\"" + curState + "\"";
+    resp += "}";
+    server.send(200, "application/json", resp);
+    return true;
   }
-  else {
-    server.send(400);
-  }
+
+  // set mode
+  Capabilities::setState(device.toInt(), state == "on");
+  server.send(202);
+
   return true;
 }
 

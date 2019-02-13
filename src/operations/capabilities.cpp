@@ -1,5 +1,6 @@
 #include "capabilities.h"
 #include "Arduino.h"
+#include "../config/Config.h"
 
 #ifdef __MY_HOME_EIGHT_LEADS_DEVICE__
     uint8_t MyHomeNew::Capabilities::m_numLeads = 8;
@@ -17,12 +18,17 @@ void MyHomeNew::Capabilities::resetLabels() {
 void MyHomeNew::Capabilities::setOutputMode() {
     for(uint8_t i = 0; i < m_numLeads; i++) {
         pinMode(m_pinIds[i], OUTPUT);
-        digitalWrite(m_pinIds[i], HIGH);
+        String savedState = Config::getInstance()->getValue((ConfigKeys)(CONFIG_LEAD1 + i));
+        digitalWrite(m_pinIds[i], savedState == "on" ? LOW : HIGH);
     }
 }
 
+bool MyHomeNew::Capabilities::getState(uint8_t pin) {
+    return digitalRead(m_pinIds[pin]) == LOW;
+}
+
 bool MyHomeNew::Capabilities::setState(uint8_t pin, bool state, float pwm) {
-    Serial.printf("switched %s pin %d", (state? "ON": "OFF"), pin);
     digitalWrite(m_pinIds[pin], state ? LOW : HIGH);
+    Config::getInstance()->setValue((ConfigKeys)(CONFIG_LEAD1 + pin), state ? "on": "off")->save();
     return true;
 }

@@ -65,6 +65,7 @@ void setupMacAddress() {
 
 void setup() {
   Serial.begin(115200);
+  SPIFFS.begin();
   setupMacAddress();
   WiFi.hostname("myhomenew" + String(ESP.getChipId(), HEX));
   Capabilities::setOutputMode();
@@ -84,6 +85,19 @@ void setup() {
     WiFiOps::startAP();
   }
   else {
+    char* host = new char[WiFi.hostname().length()];
+    strcpy(host, WiFi.hostname().c_str());
+    
+    if (!MDNS.begin(host)) {
+      Serial.println("Error setting up MDNS responder!");
+    } else {
+      Serial.println("MDNS begin success");
+      yield();
+    }
+    
+    MDNS.addService("http", "tcp", 80);
+    Serial.println("MDNS service started!");
+
     Serial.print("Connecting to SSID: "); Serial.println(ssid);
     WiFi.mode(WIFI_STA);
     WiFi.begin(); 
@@ -95,10 +109,6 @@ void setup() {
     else {
       Serial.print("hostname: ");
       Serial.println(WiFi.hostname());
-
-      if (!MDNS.begin(WiFi.hostname().c_str())) {
-        Serial.println("Error setting up MDNS responder!");
-      }
     }
   }
 
@@ -110,7 +120,6 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   server.handleClient();
   delay(100);
 }

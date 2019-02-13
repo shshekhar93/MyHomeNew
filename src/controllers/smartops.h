@@ -13,5 +13,7 @@ namespace MyHomeNew {
       bool canHandle(HTTPMethod method, String uri);
       bool canUpload(String uri);
       bool handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri);
+      // static bool setState(uint8_t pinId, bool state, float pwm = 1, bool viaLabel = false);
+      // static bool getState(uint8_t pinId, bool viaLabel);
   };
 }
