@@ -70,7 +70,7 @@ bool MyHomeNew::WiFiOps::startAP() {
   String ssidStr = "MyHomeNew-" + String(ESP.getChipId(), HEX);
   Serial.print("ssid: ");
   Serial.println(ssidStr);
-  bool success = WiFi.softAP(ssidStr.c_str(), "11111111");
+  bool success = WiFi.softAP(ssidStr.c_str(), Config::getInstance()->getValue(CONFIG_ST_PASSWORD));
   IPAddress myIP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
   Serial.println(myIP);

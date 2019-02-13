@@ -11,6 +11,10 @@ bool MyHomeNew::ConfigOps::canUpload(String uri) {
   return false;
 }
 bool MyHomeNew::ConfigOps::handle(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) {
+  if(requestMethod == HTTP_GET) {
+    return handleGet(server, requestMethod, requestUri);
+  }
+
   if(requestMethod == HTTP_POST) {
     return handlePost(server, requestMethod, requestUri);
   }
@@ -28,27 +32,51 @@ bool MyHomeNew::ConfigOps::handlePost(ESP8266WebServer& server, HTTPMethod reque
   JsonObject& reqBody = jsonBuffer.parseObject(server.arg("plain"));
   String ssid = reqBody["ssid"];
   String password = reqBody["password"];
+  String stPassword = reqBody[F("st_password")];
+
+  // Save ssid and password if provided.
   if(ssid != "") {
     Serial.print("ssid: ");
     Serial.println(ssid);
+
+    if(password == "") {
+      Serial.println("Setting empty password");
+    }
+    else {
+      Serial.print("Setting password len ");
+      Serial.println(password.length());
+    }
+
+    Config::getInstance()
+      ->setValue(CONFIG_SSID, ssid.c_str())
+      ->setValue(CONFIG_PASSWORD, password.c_str());
   }
 
-  if(password == "") {
-    Serial.println("Setting empty password");
-  }
-  else {
-    Serial.print("Setting password len ");
-    Serial.println(password.length());
+  if(stPassword != "") {
+    Config::getInstance()
+      ->setValue(CONFIG_ST_PASSWORD, stPassword.c_str());
   }
 
-  Config::getInstance()
-    ->setValue(CONFIG_SSID, ssid.c_str())
-    ->setValue(CONFIG_PASSWORD, password.c_str())
-    ->save();
+  Config::getInstance()->save();
 
-  Serial.println("setting content length 0");
   server.setContentLength(0);
-  Serial.println("sending 204");
   server.send(204);
+  return true;
+}
+
+bool MyHomeNew::ConfigOps::handleGet(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) {
+  Config* _config = Config::getInstance();
+  String endQuote = String("\"");
+  String resp = "{";
+  resp += String("\"ssid\":\"") + _config->getValue(CONFIG_SSID) + endQuote;
+  resp += ",\"password_len\":" + strlen(_config->getValue(CONFIG_PASSWORD));
+  resp += ",\"st_password_len\":" + strlen(_config->getValue(CONFIG_ST_PASSWORD));
+  resp += String(",\"lead1\":\"") + _config->getValue(CONFIG_LEAD1) + endQuote;
+  resp += String(",\"lead2\":\"") + _config->getValue(CONFIG_LEAD2) + endQuote;
+  resp += String(",\"lead3\":\"") + _config->getValue(CONFIG_LEAD3) + endQuote;
+  resp += String(",\"lead4\":\"") + _config->getValue(CONFIG_LEAD4) + endQuote;
+  resp += "}";
+
+  server.send(200, "application/json", resp);
   return true;
 }

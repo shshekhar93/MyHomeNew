@@ -7,6 +7,7 @@ namespace MyHomeNew {
 
       bool handleDisallowedMethods(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri);
       bool handlePost(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri);
+      bool handleGet(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri);
 
     public:
       bool canHandle(HTTPMethod method, String uri);
