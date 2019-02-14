@@ -69,12 +69,11 @@ bool MyHomeNew::ConfigOps::handleGet(ESP8266WebServer& server, HTTPMethod reques
   String endQuote = String("\"");
   String resp = "{";
   resp += String("\"ssid\":\"") + _config->getValue(CONFIG_SSID) + endQuote;
-  resp += ",\"password_len\":" + strlen(_config->getValue(CONFIG_PASSWORD));
-  resp += ",\"st_password_len\":" + strlen(_config->getValue(CONFIG_ST_PASSWORD));
-  resp += String(",\"lead1\":\"") + _config->getValue(CONFIG_LEAD1) + endQuote;
-  resp += String(",\"lead2\":\"") + _config->getValue(CONFIG_LEAD2) + endQuote;
-  resp += String(",\"lead3\":\"") + _config->getValue(CONFIG_LEAD3) + endQuote;
-  resp += String(",\"lead4\":\"") + _config->getValue(CONFIG_LEAD4) + endQuote;
+  resp += ",\"password_len\":" + String(strlen(_config->getValue(CONFIG_PASSWORD)));
+  resp += ",\"st_password_len\":" + String(strlen(_config->getValue(CONFIG_ST_PASSWORD)));
+  for(uint8_t i = 0; i < 4; i++) {
+    resp += ",\"lead" + String(i + 1) + "\":" + String((unsigned int)_config->getLeadVal((ConfigKeys)(CONFIG_LEAD1 + i)));
+  }
   resp += "}";
 
   server.send(200, "application/json", resp);

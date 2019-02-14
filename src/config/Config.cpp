@@ -1,6 +1,7 @@
 #include "Config.h"
 #include "../common/StringConstants.h"
 #include "FS.h"
+#include "../common/utils.h"
 
 MyHomeNew::Config* MyHomeNew::Config::s_intance = NULL;
 
@@ -8,7 +9,6 @@ MyHomeNew::Config::Config() {
   strcpy(m_ssid, "");
   strcpy(m_password, "");
   strcpy(m_stPassword, "");
-  m_leads = 0;
 
   File configFile = SPIFFS.open("/config.json", "r");
   if (!configFile) {
@@ -21,21 +21,21 @@ MyHomeNew::Config::Config() {
 
   if (!config.success()) {
     Serial.println(FStr(ConfigParseFailed));
+    return;
   }
 
   strcpy(m_ssid, config.get<String>("ssid").c_str());
   strcpy(m_password, config.get<String>("pass").c_str());
   strcpy(m_stPassword, config.get<String>("st_pass").c_str());
-  m_leads = 0;
   
   for(uint8_t i = 0; i < 4; i++) {
     String key = "lead" + (i + 1);
     String val = config.get<String>(key);
-    if(val == p_on) {
-      m_leads |= (1 << i);
-    } else {
-      m_leads &= ~(1 << i);
+    if(!Utils::isInt(val)) {
+      m_leads[i] = 0;
+      continue;
     }
+    m_leads[i] = val.toInt();
   }
 
   configFile.close();
@@ -56,16 +56,26 @@ const char* MyHomeNew::Config::getValue(ConfigKeys key) {
       return m_password;
     case CONFIG_ST_PASSWORD:
       return m_stPassword;
-    case CONFIG_LEAD1:
-      return (m_leads & 0x01) ? p_on : p_off;
-    case CONFIG_LEAD2:
-      return (m_leads & 0x02) ? p_on : p_off;
-    case CONFIG_LEAD3:
-      return (m_leads & 0x04) ? p_on : p_off;
-    case CONFIG_LEAD4:
-      return (m_leads & 0x08) ? p_on : p_off;
+    default:
+      break;
   }
   return p_empty;
+}
+
+uint8_t MyHomeNew::Config::getLeadVal(ConfigKeys key) {
+  switch (key) {
+    case CONFIG_LEAD1:
+      return m_leads[0];
+    case CONFIG_LEAD2:
+      return m_leads[1];
+    case CONFIG_LEAD3:
+      return m_leads[2];
+    case CONFIG_LEAD4:
+      return m_leads[3];
+    default:
+      break;
+  }
+  return 0;
 }
 
 MyHomeNew::Config* MyHomeNew::Config::setValue(ConfigKeys key, const char* value) {
@@ -79,29 +89,31 @@ MyHomeNew::Config* MyHomeNew::Config::setValue(ConfigKeys key, const char* value
     case CONFIG_ST_PASSWORD:
       strcpy(m_stPassword, value);
       break;
-    case CONFIG_LEAD1:
-      setOrClearLead(0x01, value);
-      break;
-    case CONFIG_LEAD2:
-      setOrClearLead(0x02, value);
-      break;
-    case CONFIG_LEAD3:
-      setOrClearLead(0x04, value);
-      break;
-    case CONFIG_LEAD4:
-      setOrClearLead(0x08, value);
+    default:
       break;
   }
   return this;
 }
 
-void MyHomeNew::Config::setOrClearLead(uint8_t mask, const char* val) {
-  if(!strcmp(val, p_on)) {
-    m_leads |= mask;
+MyHomeNew::Config* MyHomeNew::Config::setLeadVal(ConfigKeys key, uint8_t val) {
+  switch (key)
+  {
+    case CONFIG_LEAD1:
+      m_leads[0] = val;
+      break;
+    case CONFIG_LEAD2:
+      m_leads[1] = val;
+      break;
+    case CONFIG_LEAD3:
+      m_leads[2] = val;
+      break;
+    case CONFIG_LEAD4:
+      m_leads[3] = val;
+      break;
+    default:
+      break;
   }
-  else {
-    m_leads &= ~mask;
-  }
+  return this;
 }
 
 bool MyHomeNew::Config::save() {
@@ -119,8 +131,7 @@ bool MyHomeNew::Config::save() {
 
   for(uint8_t i = 0; i < 4; i++) {
     String key = "lead" + (i + 1);
-    String value = (m_leads & (1 << i)) ? p_on : p_off;
-    obj[key] = String(value);
+    obj[key] = String((unsigned int)m_leads[i]);
   }
 
   obj.printTo(configFile);

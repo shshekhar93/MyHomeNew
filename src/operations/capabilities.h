@@ -31,7 +31,7 @@ namespace MyHomeNew {
             static const char* getCapabilities();
             static void resetLabels(); 
             static void setOutputMode();
-            static bool getState(uint8_t pin);
-            static bool setState(uint8_t pin, bool state, float pwm = 1);
+            static uint8_t getState(uint8_t pin);
+            static bool setState(uint8_t pin, uint8_t dutyPercent);
     };
 }

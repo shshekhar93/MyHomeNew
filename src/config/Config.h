@@ -18,20 +18,18 @@ namespace MyHomeNew {
       char m_ssid[32];
       char m_password[32];
       char m_stPassword[32];
-      uint8_t m_leads;
+      uint8_t m_leads[8];
 
-      const char p_on[3] = {'o', 'n', '\0'};
-      const char p_off[4] = {'o', 'f', 'f', '\0'};
       const char p_empty[1] = {'\0'};
 
       static Config* s_intance;
 
-      void setOrClearLead(uint8_t mask, const char*);
-
     public:
       static Config* getInstance();
       const char* getValue(ConfigKeys key);
+      uint8_t getLeadVal(ConfigKeys);
       Config* setValue(ConfigKeys key, const char* value);
+      Config* setLeadVal(ConfigKeys, uint8_t);
       bool save();
   };
 }

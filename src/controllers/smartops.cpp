@@ -31,7 +31,7 @@ bool MyHomeNew::SmartOps::handleDisallowedMethods(ESP8266WebServer& server, HTTP
 
 bool MyHomeNew::SmartOps::handleGet(ESP8266WebServer& server, HTTPMethod requestMethod, String requestUri) {
   String device = server.arg("dev");
-  String state = server.arg("state");
+  String dutyPercent = server.arg("brightness");
 
   if(!Utils::isInt(device)) {
     server.send(400);
@@ -39,18 +39,24 @@ bool MyHomeNew::SmartOps::handleGet(ESP8266WebServer& server, HTTPMethod request
   }
 
   // Get mode
-  if(state == "") {
-    String curState = Capabilities::getState(device.toInt()) ? "on" : "off";
+  if(dutyPercent == "") {
+    unsigned int brightness = Capabilities::getState(device.toInt());
+
     String resp = "{";
-    resp += "\"dev\":\"" + device + "\",";
-    resp += "\"state\":\"" + curState + "\"";
+    resp += "\"dev\":\"" + device + "\"";
+    resp += ",\"brightness\":" + String(brightness);
     resp += "}";
     server.send(200, "application/json", resp);
     return true;
   }
 
   // set mode
-  Capabilities::setState(device.toInt(), state == "on");
+  if(!Utils::isInt(dutyPercent)){
+    server.send(400);
+    return true;
+  }
+
+  Capabilities::setState(device.toInt(), dutyPercent.toInt());
   server.send(202);
 
   return true;
