@@ -18,6 +18,7 @@ namespace MyHomeNew {
       char m_ssid[32];
       char m_password[32];
       char m_stPassword[32];
+      bool m_isActiveStateLow;
       uint8_t m_leads[8];
 
       const char p_empty[1] = {'\0'};
@@ -30,6 +31,7 @@ namespace MyHomeNew {
       uint8_t getLeadVal(ConfigKeys);
       Config* setValue(ConfigKeys key, const char* value);
       Config* setLeadVal(ConfigKeys, uint8_t);
+      bool isActiveStateLow();
       bool save();
   };
 }

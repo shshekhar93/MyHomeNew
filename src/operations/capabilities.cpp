@@ -17,19 +17,19 @@ void MyHomeNew::Capabilities::resetLabels() {
 }
 
 void MyHomeNew::Capabilities::setOutputMode() {
-    for(uint8_t i = 0; i < m_numLeads; i++) {
-        pinMode(m_pinIds[i], OUTPUT);
-        uint8_t dutyPercent = Config::getInstance()->getLeadVal((ConfigKeys)(CONFIG_LEAD1 + i));
+    for(uint8_t pin = 0; pin < m_numLeads; pin++) {
+        pinMode(m_pinIds[pin], OUTPUT);
+        uint8_t dutyPercent = Config::getInstance()->getLeadVal((ConfigKeys)(CONFIG_LEAD1 + pin));
 
         if(dutyPercent <= 0) {
-            return digitalWrite(m_pinIds[i], HIGH);
+            return switchOff(pin);
         }
 
         if(dutyPercent >= 100) {
-            return digitalWrite(m_pinIds[i], LOW);
+            return switchOn(pin);
         }
 
-        return analogWrite(m_pinIds[i], (int)(10.23 * (100 - dutyPercent)));
+        return switchWithPWM(pin, dutyPercent);
     }
 }
 
@@ -39,18 +39,42 @@ uint8_t MyHomeNew::Capabilities::getState(uint8_t pin) {
 
 bool MyHomeNew::Capabilities::setState(uint8_t pin, uint8_t dutyPercent) {
     if(dutyPercent <= 0) {
-        digitalWrite(m_pinIds[pin], HIGH);
+        switchOff(pin);
         dutyPercent = 0;
     }
     else if(dutyPercent >= 100) {
-        digitalWrite(m_pinIds[pin], LOW);
+        switchOn(pin);
         dutyPercent = 100;
     }
     else
     {
-        analogWrite(m_pinIds[pin], (int)(10.23 * (100 - dutyPercent)));
+        switchWithPWM(pin, dutyPercent);
     }
 
     Config::getInstance()->setLeadVal((ConfigKeys)(CONFIG_LEAD1 + pin), dutyPercent)->save();
     return true;
+}
+
+
+void MyHomeNew::Capabilities::switchOn(uint8_t pin) {
+    if(Config::getInstance()->isActiveStateLow()) {
+        digitalWrite(m_pinIds[pin], LOW);
+    } else {
+        digitalWrite(m_pinIds[pin], HIGH);
+    }
+}
+
+void MyHomeNew::Capabilities::switchOff(uint8_t pin) {
+    if(Config::getInstance()->isActiveStateLow()) {
+        digitalWrite(m_pinIds[pin], HIGH);
+    } else {
+        digitalWrite(m_pinIds[pin], LOW);
+    }
+}
+
+void MyHomeNew::Capabilities::switchWithPWM(uint8_t pin, uint8_t dutyPercent) {
+    if(Config::getInstance()->isActiveStateLow()) {
+        dutyPercent = 100 - dutyPercent;
+    }
+    analogWrite(m_pinIds[pin], (int)(10.23 * dutyPercent));
 }

@@ -1,7 +1,8 @@
 {
   "st_pass": "11111111",
+  "active_state": "low",
+  "lead0": "0",
   "lead1": "0",
   "lead2": "0",
-  "lead3": "0",
-  "lead4": "0"
+  "lead3": "0"
 }

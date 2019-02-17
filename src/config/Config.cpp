@@ -9,6 +9,7 @@ MyHomeNew::Config::Config() {
   strcpy(m_ssid, "");
   strcpy(m_password, "");
   strcpy(m_stPassword, "");
+  m_isActiveStateLow = true;
 
   File configFile = SPIFFS.open("/config.json", "r");
   if (!configFile) {
@@ -27,9 +28,11 @@ MyHomeNew::Config::Config() {
   strcpy(m_ssid, config.get<String>("ssid").c_str());
   strcpy(m_password, config.get<String>("pass").c_str());
   strcpy(m_stPassword, config.get<String>("st_pass").c_str());
+
+  m_isActiveStateLow = config.get<String>("active_state") == "low";
   
   for(uint8_t i = 0; i < 4; i++) {
-    String key = "lead" + (i + 1);
+    String key = "lead" + i;
     String val = config.get<String>(key);
     if(!Utils::isInt(val)) {
       m_leads[i] = 0;
@@ -116,6 +119,10 @@ MyHomeNew::Config* MyHomeNew::Config::setLeadVal(ConfigKeys key, uint8_t val) {
   return this;
 }
 
+bool MyHomeNew::Config::isActiveStateLow() {
+  return m_isActiveStateLow;
+}
+
 bool MyHomeNew::Config::save() {
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
@@ -128,9 +135,10 @@ bool MyHomeNew::Config::save() {
   obj["ssid"] = String(m_ssid);
   obj["pass"] = String(m_password);
   obj["st_pass"] = String(m_stPassword);
+  obj["active_state"] = String(m_isActiveStateLow ? "low" : "high");
 
   for(uint8_t i = 0; i < 4; i++) {
-    String key = "lead" + (i + 1);
+    String key = "lead" + i;
     obj[key] = String((unsigned int)m_leads[i]);
   }
 

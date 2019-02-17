@@ -33,5 +33,8 @@ namespace MyHomeNew {
             static void setOutputMode();
             static uint8_t getState(uint8_t pin);
             static bool setState(uint8_t pin, uint8_t dutyPercent);
+            static void switchOn(uint8_t);
+            static void switchOff(uint8_t);
+            static void switchWithPWM(uint8_t, uint8_t);
     };
 }

@@ -72,7 +72,7 @@ bool MyHomeNew::ConfigOps::handleGet(ESP8266WebServer& server, HTTPMethod reques
   resp += ",\"password_len\":" + String(strlen(_config->getValue(CONFIG_PASSWORD)));
   resp += ",\"st_password_len\":" + String(strlen(_config->getValue(CONFIG_ST_PASSWORD)));
   for(uint8_t i = 0; i < 4; i++) {
-    resp += ",\"lead" + String(i + 1) + "\":" + String((unsigned int)_config->getLeadVal((ConfigKeys)(CONFIG_LEAD1 + i)));
+    resp += ",\"lead" + String(i) + "\":" + String((unsigned int)_config->getLeadVal((ConfigKeys)(CONFIG_LEAD1 + i)));
   }
   resp += "}";
 
