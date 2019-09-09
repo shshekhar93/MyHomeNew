@@ -1,6 +1,9 @@
 {
+  "ap_mac": "CA4396000002",
+  "st_mac": "DA4396000002",
   "st_pass": "11111111",
-  "active_state": "low",
+  "type": "light",
+  "active_state": "high",
   "lead0": "0",
   "lead1": "0",
   "lead2": "0",

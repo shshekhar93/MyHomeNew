@@ -28,6 +28,9 @@ MyHomeNew::Config::Config() {
   strcpy(m_ssid, config.get<String>("ssid").c_str());
   strcpy(m_password, config.get<String>("pass").c_str());
   strcpy(m_stPassword, config.get<String>("st_pass").c_str());
+  strcpy(m_apMac, config.get<String>("ap_mac").c_str());
+  strcpy(m_stMac, config.get<String>("st_mac").c_str());
+  strcpy(m_type, config.get<String>("type").c_str());
 
   m_isActiveStateLow = config.get<String>("active_state") == "low";
   
@@ -59,6 +62,12 @@ const char* MyHomeNew::Config::getValue(ConfigKeys key) {
       return m_password;
     case CONFIG_ST_PASSWORD:
       return m_stPassword;
+    case CONFIG_AP_MAC:
+      return m_apMac;
+    case CONFIG_ST_MAC:
+      return m_stMac;
+    case CONFIG_TYPE:
+      return m_type;
     default:
       break;
   }
@@ -136,6 +145,9 @@ bool MyHomeNew::Config::save() {
   obj["pass"] = String(m_password);
   obj["st_pass"] = String(m_stPassword);
   obj["active_state"] = String(m_isActiveStateLow ? "low" : "high");
+  obj["ap_mac"] = String(m_apMac);
+  obj["st_mac"] = String(m_stMac);
+  obj["type"] = String(m_type);
 
   for(uint8_t i = 0; i < 4; i++) {
     String key = "lead" + i;

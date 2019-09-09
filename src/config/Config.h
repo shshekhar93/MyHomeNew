@@ -3,6 +3,9 @@
 
 namespace MyHomeNew {
   enum ConfigKeys {
+    CONFIG_AP_MAC,
+    CONFIG_ST_MAC,
+    CONFIG_TYPE,
     CONFIG_SSID,
     CONFIG_PASSWORD,
     CONFIG_ST_PASSWORD,
@@ -15,6 +18,9 @@ namespace MyHomeNew {
   class Config {
     private:
       Config();
+      char m_apMac[12];
+      char m_stMac[12];
+      char m_type[32];
       char m_ssid[32];
       char m_password[32];
       char m_stPassword[32];

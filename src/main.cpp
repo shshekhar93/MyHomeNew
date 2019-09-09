@@ -4,6 +4,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#include <WiFiManager.h>
 
 #include "config/Config.h"
 #include "controllers/configops.h"
@@ -18,42 +19,27 @@ extern "C" {
 
 using namespace MyHomeNew;
 ESP8266WebServer server(80);
-uint8_t APMac[6];
-uint8_t STAMac[6];
 
-// bool loadConfig() {
-//   Config* _config = Config::getInstance();
-//   Serial.print("serverName: ");
-//   Serial.println(_config->getValue("name"));
-//   return true;
-// }
-
-uint8_t hexCharToByte(char ch) {
+uint8_t chr2Nibble(char ch) {
   if (ch >= '0' && ch <= '9')
       return ch - '0';
   if (ch >= 'A' && ch <= 'F')
-      return ch - 'A' + 10;
-  if (ch >= 'a' && ch <= 'f')
-      return ch - 'a' + 10;
+      return (ch - 'A') + 10;
   return 0;
 }
 
 void setupMacAddress() {
-  // String apMacStr(FStr(APMacAddress));
-  // String staMacStr(FStr(STAMacAddress));
-  // int i = 0;
-  // for(i = 0; i < 6; i++) {
-  //   //char buf[100];
-  //   APMac[i] = (hexCharToByte(apMacStr[i*2]) * 16) + hexCharToByte(apMacStr[(i * 2) + 1]);
-  //   //sprintf(buf, "AP[%d] (%c%c): %d", i, apMacStr[i*2], apMacStr[(i * 2) + 1], APMac[i]);
-  //   //Serial.println(buf);
-  //   STAMac[i] = (hexCharToByte(staMacStr[i*2]) * 16) + hexCharToByte(staMacStr[(i * 2) + 1]);
-  //   //sprintf(buf, "ST[%d] (%c%c): %d", i, staMacStr[i*2], staMacStr[(i * 2) + 1], STAMac[i]);
-  //   //Serial.println(buf);
-  // }
+  const char* APMacStr = Config::getInstance()->getValue(CONFIG_AP_MAC);
+  const char* STMacStr = Config::getInstance()->getValue(CONFIG_ST_MAC);
 
-  uint8_t APMac[6] = {0xCA, 0x43, 0x96, 0x00, 0x00, 0x00};
-  uint8_t STAMac[6] = {0xDA, 0x43, 0x96, 0x00, 0x00, 0x00};
+  uint8_t APMac[6];
+  uint8_t STAMac[6];
+
+  for(uint8_t i = 0; i < 6; i++) {
+    uint8_t strIdx = i * 2;
+    APMac[i] = (chr2Nibble(APMacStr[strIdx]) << 4) + chr2Nibble(APMacStr[strIdx + 1]);
+    STAMac[i] = (chr2Nibble(STMacStr[strIdx]) << 4) + chr2Nibble(STMacStr[strIdx + 1]);
+  }
   
   WiFi.mode(WIFI_AP_STA);
   yield();
@@ -63,11 +49,17 @@ void setupMacAddress() {
   yield();
 }
 
+void WiFiManagerSetup(String hostname) {
+  WiFiManager wifiManager;
+  wifiManager.autoConnect(hostname.c_str(), Config::getInstance()->getValue(CONFIG_ST_PASSWORD));
+}
+
 void setup() {
   Serial.begin(115200);
   SPIFFS.begin();
   setupMacAddress();
-  WiFi.hostname("myhomenew" + String(ESP.getChipId(), HEX));
+  String hostname = "myhomenew-" + String(ESP.getChipId(), HEX);
+  WiFi.hostname(hostname);
   Capabilities::setOutputMode();
 
   // Setup spiffs & config
@@ -78,48 +70,46 @@ void setup() {
     return;
   }
   Serial.print("This node AP mac: "); Serial.println(WiFi.softAPmacAddress());
-  Serial.print("This node AP (STA) mac: "); Serial.println(WiFi.softAPmacAddress());
+  Serial.print("This node AP (STA) mac: "); Serial.println(WiFi.macAddress());
 
-  String ssid = WiFi.SSID();
-  if(ssid == "") {
-    WiFiOps::startAP();
+  if(WiFi.SSID() != "") {
+    WiFi.begin();
+
+    if(WiFi.waitForConnectResult() != WL_CONNECTED) {
+      WiFiManagerSetup(hostname);
+    }
   }
   else {
-    char* host = new char[WiFi.hostname().length()];
-    strcpy(host, WiFi.hostname().c_str());
-    
-    if (!MDNS.begin(host)) {
-      Serial.println("Error setting up MDNS responder!");
-    } else {
-      Serial.println("MDNS begin success");
-      yield();
-    }
-    
-    MDNS.addService("http", "tcp", 80);
-    Serial.println("MDNS service started!");
-
-    Serial.print("Connecting to SSID: "); Serial.println(ssid);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(); 
-    
-    // if not return WL_CONNECTED, retry for some time, then just start AP.
-    if(WiFi.waitForConnectResult() != WL_CONNECTED) {
-      WiFiOps::startAP();
-    }
-    else {
-      Serial.print("hostname: ");
-      Serial.println(WiFi.hostname());
-    }
+    WiFiManagerSetup(hostname);
   }
+  Serial.print("Connected to:"); Serial.println(WiFi.SSID());
+
+  yield();
+
+  if (!MDNS.begin(hostname)) {
+    Serial.println("Error setting up MDNS responder!");
+  } else {
+    Serial.println("MDNS begin success");
+  }
+
+  yield();
+  
+  MDNS.addService("http", "tcp", 80);
+  MDNS.addServiceTxt("http", "tcp", "type", Config::getInstance() ->getValue(CONFIG_TYPE));
+  Serial.println("MDNS service started!");
+  Serial.print("Hostname:"); Serial.println(hostname);
 
   server.addHandler(new ConfigOps());
   server.addHandler(new WiFiOps());
   server.addHandler(new SmartOps());
   server.begin();
   Serial.println("HTTP server started");
+
+  WiFi.softAPdisconnect();
 }
 
 void loop() {
+  MDNS.update();
   server.handleClient();
   delay(100);
 }
