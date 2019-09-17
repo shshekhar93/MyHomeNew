@@ -22,14 +22,17 @@ void MyHomeNew::Capabilities::setOutputMode() {
         uint8_t dutyPercent = Config::getInstance()->getLeadVal((ConfigKeys)(CONFIG_LEAD1 + pin));
 
         if(dutyPercent <= 0) {
-            return switchOff(pin);
+            switchOff(pin);
+            continue;
         }
 
         if(dutyPercent >= 100) {
-            return switchOn(pin);
+            switchOn(pin);
+            continue;
         }
 
-        return switchWithPWM(pin, dutyPercent);
+        switchWithPWM(pin, dutyPercent);
+        continue;
     }
 }
 
@@ -38,6 +41,10 @@ uint8_t MyHomeNew::Capabilities::getState(uint8_t pin) {
 }
 
 bool MyHomeNew::Capabilities::setState(uint8_t pin, uint8_t dutyPercent) {
+    if(pin >= m_numLeads) {
+        return false;
+    }
+
     if(dutyPercent <= 0) {
         switchOff(pin);
         dutyPercent = 0;
