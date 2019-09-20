@@ -6,10 +6,11 @@
 MyHomeNew::Config* MyHomeNew::Config::s_intance = NULL;
 
 MyHomeNew::Config::Config() {
+  is_configLoaded = false;
   strcpy(m_ssid, "");
   strcpy(m_password, "");
   strcpy(m_stPassword, "");
-  m_isActiveStateLow = true;
+  m_isActiveStateLow = false;
 
   File configFile = SPIFFS.open("/config.json", "r");
   if (!configFile) {
@@ -45,6 +46,7 @@ MyHomeNew::Config::Config() {
   }
 
   configFile.close();
+  is_configLoaded = true;
 }
 
 MyHomeNew::Config* MyHomeNew::Config::getInstance() {
@@ -133,6 +135,10 @@ bool MyHomeNew::Config::isActiveStateLow() {
 }
 
 bool MyHomeNew::Config::save() {
+  if(is_configLoaded == false) {
+    return false;
+  }
+  
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
     Serial.println(FStr(ConfigLoadFailed));

@@ -18,6 +18,7 @@ namespace MyHomeNew {
   class Config {
     private:
       Config();
+      bool is_configLoaded;
       char m_apMac[12];
       char m_stMac[12];
       char m_type[32];

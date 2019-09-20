@@ -55,6 +55,7 @@ void WiFiManagerSetup(String hostname) {
 }
 
 void setup() {
+  wifi_set_sleep_type(MODEM_SLEEP_T);
   Serial.begin(115200);
   SPIFFS.begin();
   setupMacAddress();
