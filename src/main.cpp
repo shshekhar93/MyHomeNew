@@ -51,7 +51,11 @@ void setupMacAddress() {
 
 void WiFiManagerSetup(String hostname) {
   WiFiManager wifiManager;
+  wifiManager.setConfigPortalTimeout(300);
   wifiManager.autoConnect(hostname.c_str(), Config::getInstance()->getValue(CONFIG_ST_PASSWORD));
+  if(WiFi.status() != WL_CONNECTED) {
+    ESP.restart();
+  }
 }
 
 void setup() {
