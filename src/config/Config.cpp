@@ -7,9 +7,12 @@ MyHomeNew::Config* MyHomeNew::Config::s_intance = NULL;
 
 MyHomeNew::Config::Config() {
   is_configLoaded = false;
-  strcpy(m_ssid, "");
-  strcpy(m_password, "");
-  strcpy(m_stPassword, "");
+  strcpy(m_ssid, p_empty);
+  strcpy(m_password, p_empty);
+  strcpy(m_stPassword, p_empty);
+  strcpy(m_host, p_empty);
+  strcpy(m_aesKey, p_empty);
+  strcpy(m_user, p_empty);
   m_isActiveStateLow = false;
 
   File configFile = SPIFFS.open("/config.json", "r");
@@ -32,6 +35,10 @@ MyHomeNew::Config::Config() {
   strcpy(m_apMac, config.get<String>("ap_mac").c_str());
   strcpy(m_stMac, config.get<String>("st_mac").c_str());
   strcpy(m_type, config.get<String>("type").c_str());
+
+  strcpy(m_user, config.get<String>("user").c_str());
+  strcpy(m_aesKey, config.get<String>("aes_key").c_str());
+  strcpy(m_host, config.get<String>("host").c_str());
 
   m_isActiveStateLow = config.get<String>("active_state") == "low";
   
@@ -70,6 +77,12 @@ const char* MyHomeNew::Config::getValue(ConfigKeys key) {
       return m_stMac;
     case CONFIG_TYPE:
       return m_type;
+    case CONFIG_HOST:
+      return m_host;
+    case CONFIG_AES_KEY:
+      return m_aesKey;
+    case CONFIG_USER:
+      return m_user;
     default:
       break;
   }
@@ -102,6 +115,15 @@ MyHomeNew::Config* MyHomeNew::Config::setValue(ConfigKeys key, const char* value
       break;
     case CONFIG_ST_PASSWORD:
       strcpy(m_stPassword, value);
+      break;
+    case CONFIG_HOST:
+      strcpy(m_host, value);
+      break;
+    case CONFIG_AES_KEY:
+      strcpy(m_aesKey, value);
+      break;
+    case CONFIG_USER:
+      strcpy(m_user, value);
       break;
     default:
       break;
@@ -155,6 +177,10 @@ bool MyHomeNew::Config::save() {
   obj["st_mac"] = String(m_stMac);
   obj["type"] = String(m_type);
 
+  obj["user"] = String(m_user);
+  obj["aes_key"] = String(m_aesKey);
+  obj["host"] = String(m_host);
+
   for(uint8_t i = 0; i < 4; i++) {
     String key = "lead" + i;
     obj[key] = String((unsigned int)m_leads[i]);
@@ -162,5 +188,33 @@ bool MyHomeNew::Config::save() {
 
   obj.printTo(configFile);
   configFile.close();
+  return true;
+}
+
+bool MyHomeNew::Config::saveBackupConfig(const char* user, const char* aesKey, const char* host) {
+  File backupFileR = SPIFFS.open("/backup.json", "r");
+  if (!backupFileR) {
+    return false;
+  }
+
+  StaticJsonBuffer<1024> jsonBuffer;
+  JsonObject& backup = jsonBuffer.parseObject(backupFileR);
+  backupFileR.close();
+
+  if(!backup.success()) {
+    // ignore for now!
+    return false;
+  }
+
+  backup["user"] = user;
+  backup["aes_key"] = aesKey;
+  backup["host"] = host;
+
+  File backupFileW = SPIFFS.open("/backup.json", "r");
+  if (!backupFileW) {
+    return false;
+  }
+  backup.printTo(backupFileW);
+  backupFileW.close();
   return true;
 }

@@ -9,6 +9,9 @@ namespace MyHomeNew {
     CONFIG_SSID,
     CONFIG_PASSWORD,
     CONFIG_ST_PASSWORD,
+    CONFIG_USER,
+    CONFIG_AES_KEY,
+    CONFIG_HOST,
     CONFIG_LEAD1,
     CONFIG_LEAD2,
     CONFIG_LEAD3,
@@ -22,6 +25,11 @@ namespace MyHomeNew {
       char m_apMac[12];
       char m_stMac[12];
       char m_type[32];
+
+      char m_user[32];
+      char m_aesKey[32];
+      char m_host[32];
+
       char m_ssid[32];
       char m_password[32];
       char m_stPassword[32];
@@ -40,5 +48,7 @@ namespace MyHomeNew {
       Config* setLeadVal(ConfigKeys, uint8_t);
       bool isActiveStateLow();
       bool save();
+
+      static bool saveBackupConfig(const char* user, const char* aesKey, const char* host);
   };
 }
