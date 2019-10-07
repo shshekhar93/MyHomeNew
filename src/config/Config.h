@@ -22,17 +22,17 @@ namespace MyHomeNew {
     private:
       Config();
       bool is_configLoaded;
-      char m_apMac[12];
-      char m_stMac[12];
+      char m_apMac[13];
+      char m_stMac[13];
       char m_type[32];
 
-      char m_user[32];
-      char m_aesKey[32];
-      char m_host[32];
+      char m_user[33];
+      char m_aesKey[33];
+      char m_host[33];
 
-      char m_ssid[32];
-      char m_password[32];
-      char m_stPassword[32];
+      char m_ssid[33];
+      char m_password[33];
+      char m_stPassword[33];
       bool m_isActiveStateLow;
       uint8_t m_leads[8];
 

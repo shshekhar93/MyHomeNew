@@ -1,5 +1,6 @@
 #include "wifi.h"
 #include "../config/Config.h"
+#include "../common/CryptoUtils.h"
 #include <ESP8266WiFi.h>
 #include <WiFiManager.h>
 
@@ -13,26 +14,19 @@ void MyHomeNew::WiFiSetup::forgetWiFiCredsAndRestart() {
   ESP.restart();
 }
 
-uint8_t chr2Nibble(char ch) {
-  if (ch >= '0' && ch <= '9')
-      return ch - '0';
-  if (ch >= 'A' && ch <= 'F')
-      return (ch - 'A') + 10;
-  return 0;
-}
-
 void MyHomeNew::WiFiSetup::setupMacAddress() {
   const char* APMacStr = Config::getInstance()->getValue(CONFIG_AP_MAC);
   const char* STMacStr = Config::getInstance()->getValue(CONFIG_ST_MAC);
 
   uint8_t APMac[6];
   uint8_t STAMac[6];
-
-  for(uint8_t i = 0; i < 6; i++) {
-    uint8_t strIdx = i * 2;
-    APMac[i] = (chr2Nibble(APMacStr[strIdx]) << 4) + chr2Nibble(APMacStr[strIdx + 1]);
-    STAMac[i] = (chr2Nibble(STMacStr[strIdx]) << 4) + chr2Nibble(STMacStr[strIdx + 1]);
-  }
+  Serial.print("ap mac: ");
+  Serial.println(APMacStr);
+  hexStrToByteArr(APMacStr, APMac);
+  Serial.print("STA mac: ");
+  Serial.println(STMacStr);
+  hexStrToByteArr(STMacStr, STAMac);
+  Serial.println("decoded hex strs");
   
   WiFi.mode(WIFI_AP_STA);
   yield();

@@ -1,7 +1,8 @@
 #include <Arduino.h>
 #include "FS.h"
+#include "IPAddress.h"
 #include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
+#include <WebSocketsClient.h>
 
 #include "config/Config.h"
 #include "controllers/configops.h"
@@ -10,13 +11,46 @@
 #include "controllers/smartops.h"
 #include "operations/capabilities.h"
 #include "operations/wifi.h"
+#include "common/CryptoUtils.h"
 
 extern "C" {
   #include <user_interface.h>
 }
 
 using namespace MyHomeNew;
-ESP8266WebServer server(80);
+
+WebSocketsClient client;
+
+void handleEvent (String jsonStr) {
+  
+}
+
+void onWSEvent(WStype_t type, uint8_t * payload, size_t length) {
+  char* input;
+  String key;
+  switch (type)
+  {
+  case WStype_ERROR:
+    Serial.println("an error occured!");
+    break;
+  case WStype_CONNECTED:
+    Serial.println("connected");
+    break;
+  case WStype_DISCONNECTED:
+    Serial.println("disconnected");
+    break;
+  case WStype_TEXT:
+    input = new char[length + 1];
+    memcpy(input, payload, length);
+    input[length] = '\0';
+    key = Config::getInstance()->getValue(CONFIG_AES_KEY);
+    handleEvent(decrypt(input, key.c_str()));
+    delete input;
+    break;
+  default:
+    break;
+  }
+}
 
 void setup() {
   wifi_set_sleep_type(MODEM_SLEEP_T);
@@ -52,16 +86,16 @@ void setup() {
   yield();
   Serial.print("Hostname:"); Serial.println(hostname);
 
-  server.addHandler(new ConfigOps());
-  server.addHandler(new WiFiOps());
-  server.addHandler(new SmartOps());
-  server.begin();
-  Serial.println("HTTP server started");
+  String password = encrypt(hostname.c_str(), Config::getInstance()->getValue(CONFIG_AES_KEY));
+  String auth = "Authorization: " + String(Config::getInstance()->getValue(CONFIG_USER)) + ":" + password;
+  client.setExtraHeaders(auth.c_str());
+  client.begin("192.168.2.5", 8090, "/v1/ws", "myhomenew-device");
+  client.onEvent(onWSEvent);
 
   WiFi.softAPdisconnect();
 }
 
 void loop() {
-  server.handleClient();
+  client.loop();
   delay(100);
 }
