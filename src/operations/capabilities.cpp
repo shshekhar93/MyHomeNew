@@ -58,7 +58,7 @@ bool MyHomeNew::Capabilities::setState(uint8_t pin, uint8_t dutyPercent) {
         switchWithPWM(pin, dutyPercent);
     }
 
-    Config::getInstance()->setLeadVal((ConfigKeys)(CONFIG_LEAD1 + pin), dutyPercent)->save();
+    Config::getInstance()->setLeadVal((ConfigKeys)(CONFIG_LEAD1 + pin), dutyPercent);
     return true;
 }
 
