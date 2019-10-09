@@ -20,13 +20,8 @@ void MyHomeNew::WiFiSetup::setupMacAddress() {
 
   uint8_t APMac[6];
   uint8_t STAMac[6];
-  Serial.print("ap mac: ");
-  Serial.println(APMacStr);
   hexStrToByteArr(APMacStr, APMac);
-  Serial.print("STA mac: ");
-  Serial.println(STMacStr);
   hexStrToByteArr(STMacStr, STAMac);
-  Serial.println("decoded hex strs");
   
   WiFi.mode(WIFI_AP_STA);
   yield();
@@ -80,7 +75,7 @@ void MyHomeNew::WiFiSetup::setupWithWiFiManager(String hostname) {
   }
 
   // Save in backup.json
-  if(!Config::saveBackupConfig(user, pass, host)) {
+  if(!Config::getInstance()->save()) {
     forgetWiFiCredsAndRestart();
   }
 }

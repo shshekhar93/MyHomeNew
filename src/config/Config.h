@@ -1,13 +1,12 @@
 #include <cstddef>
 #include <ArduinoJson.h>
+#include "common/StringConstants.h"
 
 namespace MyHomeNew {
   enum ConfigKeys {
     CONFIG_AP_MAC,
     CONFIG_ST_MAC,
     CONFIG_TYPE,
-    CONFIG_SSID,
-    CONFIG_PASSWORD,
     CONFIG_ST_PASSWORD,
     CONFIG_USER,
     CONFIG_AES_KEY,
@@ -21,7 +20,12 @@ namespace MyHomeNew {
   class Config {
     private:
       Config();
-      bool is_configLoaded;
+      bool is_stateLoaded;
+      bool is_settingsLoaded;
+      bool is_stateDirty;
+      bool is_settingsDirty;
+
+      bool m_isActiveStateLow;
       char m_apMac[13];
       char m_stMac[13];
       char m_type[32];
@@ -29,14 +33,14 @@ namespace MyHomeNew {
       char m_user[33];
       char m_aesKey[33];
       char m_host[33];
-
-      char m_ssid[33];
-      char m_password[33];
       char m_stPassword[33];
-      bool m_isActiveStateLow;
+      
       uint8_t m_leads[8];
 
-      const char p_empty[1] = {'\0'};
+      bool loadState();
+      bool loadSettings(String filename = "");
+      bool saveState();
+      bool saveSettings();
 
       static Config* s_intance;
 
@@ -48,7 +52,5 @@ namespace MyHomeNew {
       Config* setLeadVal(ConfigKeys, uint8_t);
       bool isActiveStateLow();
       bool save();
-
-      static bool saveBackupConfig(const char* user, const char* aesKey, const char* host);
   };
 }

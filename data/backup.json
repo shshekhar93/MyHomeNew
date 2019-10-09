@@ -1,7 +1,10 @@
 {
   "ap_mac": "CA4396000003",
   "st_mac": "DA4396000003",
+  "st_pass": "11111111",
   "user": "",
   "aes_key": "",
-  "host": ""
+  "host": "",
+  "type": "switch",
+  "active_state": "high"
 }

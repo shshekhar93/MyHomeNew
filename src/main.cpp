@@ -1,14 +1,13 @@
+#define ARDUINOJSON_ENABLE_PROGMEM
+
 #include <Arduino.h>
 #include "FS.h"
 #include "IPAddress.h"
 #include <ESP8266WiFi.h>
 
 #include "config/Config.h"
-#include "controllers/configops.h"
 #include "common/StringConstants.h"
 #include "controllers/WebSocketHanlder.h"
-#include "controllers/wifiops.h"
-#include "controllers/smartops.h"
 #include "operations/capabilities.h"
 #include "operations/wifi.h"
 #include "common/CryptoUtils.h"
