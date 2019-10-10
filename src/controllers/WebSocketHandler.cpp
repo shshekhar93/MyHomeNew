@@ -72,11 +72,6 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
     Serial.println("SET_KEY");
     _config->setValue(CONFIG_AES_KEY, data.c_str());
     m_flags |= SHOULD_SAVE_CONFIG;
-    // _config->saveBackupConfig(
-    //   _config->getValue(CONFIG_USER), 
-    //   data.c_str(),
-    //   _config->getValue(CONFIG_HOST)
-    // );
     sendEncrypted(s_okResp);
     m_cyclesTracker += 3;
     return;
@@ -87,11 +82,6 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
     Serial.println("SET_USR");
     _config->setValue(CONFIG_USER, data.c_str());
     m_flags |= SHOULD_SAVE_CONFIG;
-    // _config->saveBackupConfig(
-    //   _config->getValue(CONFIG_USER), 
-    //   data.c_str(),
-    //   _config->getValue(CONFIG_HOST)
-    // );
     sendEncrypted(s_okResp);
     m_cyclesTracker += 3;
     return;
@@ -151,6 +141,8 @@ void MyHomeNew::WebSocketHandler::connect(const String& hostname) {
   m_client->setExtraHeaders(auth.c_str());
   m_client->begin("192.168.2.5", 8090, "/v1/ws", "myhomenew-device");
   m_client->onEvent(onWSEvent);
+  m_client->enableHeartbeat(5000, 3500, 10);
+  m_client->setReconnectInterval(5000);
 }
 
 void MyHomeNew::WebSocketHandler::loop() {

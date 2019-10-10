@@ -9,6 +9,7 @@ namespace MyHomeNew {
   class WebSocketHandler {
     static String s_failResp;
     static String s_okResp;
+
     static WebSocketHandler* s_instance;
     uint8_t m_flags;
     int8_t m_cyclesTracker;
