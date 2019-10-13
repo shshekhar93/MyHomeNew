@@ -2,11 +2,13 @@
 
 namespace MyHomeNew {
   class WiFiSetup {
-    private: 
+    private:
+      static uint32_t s_btnPressStart;
       static void forgetWiFiCredsAndRestart();
 
     public:
       static void setupWithWiFiManager(String hostname);
       static void setupMacAddress();
+      static void loop();
   };
 }

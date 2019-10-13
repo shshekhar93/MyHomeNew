@@ -16,14 +16,16 @@ namespace MyHomeNew {
     String m_respStr;
     WebSocketsClient* m_client;
     WebSocketHandler();
+    String getHeaders();
 
     static void onWSEvent(WStype_t type, uint8_t * payload, size_t length);
+    static uint32_t m_lastDiscTime;
 
     public:
     ~WebSocketHandler();
     static WebSocketHandler* getInstance();
 
-    void connect(const String&);
+    void connect();
     void loop();
     void handleEvent(const String&);
     void sendEncrypted();

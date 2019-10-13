@@ -27,7 +27,7 @@ void setup() {
   WiFiSetup::setupMacAddress();
   String hostname = "myhomenew-" + String(ESP.getChipId(), HEX);
   WiFi.hostname(hostname);
-  Capabilities::setOutputMode();
+  Capabilities::setPinMode();
 
   // Setup spiffs & config
   Serial.println("");
@@ -54,11 +54,12 @@ void setup() {
   yield();
   Serial.print("Hostname:"); Serial.println(hostname);
 
-  client->connect(hostname);
+  client->connect();
   WiFi.softAPdisconnect();
 }
 
 void loop() {
   client->loop();
+  WiFiSetup::loop();
   delay(100);
 }

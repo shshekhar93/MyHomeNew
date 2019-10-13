@@ -8,6 +8,8 @@ extern "C" {
   #include <user_interface.h>
 }
 
+uint32_t MyHomeNew::WiFiSetup::s_btnPressStart = 0;
+
 void MyHomeNew::WiFiSetup::forgetWiFiCredsAndRestart() {
   WiFi.disconnect(true);
   delay(100);
@@ -73,9 +75,19 @@ void MyHomeNew::WiFiSetup::setupWithWiFiManager(String hostname) {
   if(!_config->save()) {
     forgetWiFiCredsAndRestart();
   }
+}
 
-  // Save in backup.json
-  if(!Config::getInstance()->save()) {
-    forgetWiFiCredsAndRestart();
+void MyHomeNew::WiFiSetup::loop() {
+  if(digitalRead(D4) == LOW) {
+    if(s_btnPressStart == 0) {
+      s_btnPressStart = millis();
+    }
+    else if((millis() - s_btnPressStart) > 3000) {
+      // Force config portal by forgetting WiFi creds.
+      forgetWiFiCredsAndRestart();
+    }
+  }
+  else {
+    s_btnPressStart = 0;
   }
 }

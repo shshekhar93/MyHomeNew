@@ -24,13 +24,10 @@ namespace MyHomeNew {
 
     class Capabilities {
         private:
-            static uint8_t m_pinIds[8];
+            static uint8_t m_pinIds[4];
             static uint8_t m_numLeads;
-            static char* m_labels[8];
         public:
-            static const char* getCapabilities();
-            static void resetLabels(); 
-            static void setOutputMode();
+            static void setPinMode();
             static uint8_t getState(uint8_t pin);
             static bool setState(uint8_t pin, uint8_t dutyPercent);
             static void switchOn(uint8_t);

@@ -7,12 +7,14 @@
 MyHomeNew::WebSocketHandler* MyHomeNew::WebSocketHandler::s_instance = NULL;
 String MyHomeNew::WebSocketHandler::s_failResp = "{\"status\":\"FAIL\"}";
 String MyHomeNew::WebSocketHandler::s_okResp = "{\"status\":\"OK\"}";
+uint32_t MyHomeNew::WebSocketHandler::m_lastDiscTime = 0;
 
 MyHomeNew::WebSocketHandler::WebSocketHandler() {
   m_respStr = "";
   m_flags = 0;
   m_cyclesTracker = -1;
   m_client = new WebSocketsClient();
+  m_lastDiscTime = 0;
 }
 
 MyHomeNew::WebSocketHandler::~WebSocketHandler() {
@@ -38,9 +40,22 @@ void MyHomeNew::WebSocketHandler::onWSEvent(WStype_t type, uint8_t * payload, si
     break;
   case WStype_CONNECTED:
     Serial.println("WSC_CON");
+    m_lastDiscTime = 0;
     break;
   case WStype_DISCONNECTED:
     Serial.println("WSC_DIS");
+
+    if(m_lastDiscTime == 0){
+      m_lastDiscTime = millis();
+    }
+    else {
+      // We have not been able to connect for last 5 mins.
+      // Simply restart.
+      if((millis() - m_lastDiscTime) > 300000ul) {
+        ESP.restart();
+      }
+    }
+
     break;
   case WStype_TEXT:
     input = new char[length + 1];
@@ -71,9 +86,11 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
   if(action == "update-key") {
     Serial.println("SET_KEY");
     _config->setValue(CONFIG_AES_KEY, data.c_str());
+    // Update the header in case we get disconnected.
+    m_client->setExtraHeaders(getHeaders().c_str());
     m_flags |= SHOULD_SAVE_CONFIG;
     sendEncrypted(s_okResp);
-    m_cyclesTracker += 3;
+    m_cyclesTracker += 2;
     return;
   }
 
@@ -83,7 +100,7 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
     _config->setValue(CONFIG_USER, data.c_str());
     m_flags |= SHOULD_SAVE_CONFIG;
     sendEncrypted(s_okResp);
-    m_cyclesTracker += 3;
+    m_cyclesTracker += 2;
     return;
   }
 
@@ -96,7 +113,7 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
     Capabilities::setState(devId, brightness);
     m_flags |= SHOULD_SAVE_CONFIG;
     sendEncrypted(s_okResp);
-    m_cyclesTracker += 3;
+    m_cyclesTracker += 2;
     return;
   }
 
@@ -131,22 +148,27 @@ void MyHomeNew::WebSocketHandler::sendEncrypted(const String& resp) {
     sendEncrypted();
   }
   m_respStr = resp;
-  m_cyclesTracker += 5;
+  m_cyclesTracker += 4;
 }
 
-void MyHomeNew::WebSocketHandler::connect(const String& hostname) {
+String MyHomeNew::WebSocketHandler::getHeaders() {
   Config* _config = Config::getInstance();
+  String hostname = "myhomenew-" + String(ESP.getChipId(), HEX);
   String password = encrypt(hostname.c_str(), _config->getValue(CONFIG_AES_KEY));
   String auth = "Authorization: " + String(_config->getValue(CONFIG_USER)) + ":" + password;
-  m_client->setExtraHeaders(auth.c_str());
-  m_client->begin("192.168.2.5", 8090, "/v1/ws", "myhomenew-device");
+  return auth;
+}
+
+void MyHomeNew::WebSocketHandler::connect() {
+  m_client->setExtraHeaders(getHeaders().c_str());
+  m_client->begin(Config::getInstance()->getValue(CONFIG_HOST), 8020, "/v1/ws", "myhomenew-device");
   m_client->onEvent(onWSEvent);
-  m_client->enableHeartbeat(5000, 3500, 10);
+  m_client->enableHeartbeat(15000, 4000, 3);
   m_client->setReconnectInterval(5000);
 }
 
 void MyHomeNew::WebSocketHandler::loop() {
-  if(m_cyclesTracker == 3) {
+  if(m_cyclesTracker == 2) {
     Serial.println("REL_SND");
     sendEncrypted();
   }
