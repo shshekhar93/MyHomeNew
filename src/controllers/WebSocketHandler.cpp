@@ -1,7 +1,8 @@
+#include "WString.h"
 #include "WebSocketHanlder.h"
 #include "common/CryptoUtils.h"
 #include "config/Config.h"
-#include "string.h"
+#include "operations/updater.h"
 #include "operations/capabilities.h"
 
 MyHomeNew::WebSocketHandler* MyHomeNew::WebSocketHandler::s_instance = NULL;
@@ -121,13 +122,20 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
   if(action == "get-state") {
     Serial.println("GET_STE");
     String state = s_okResp.substring(0, s_okResp.length() - 1) + 
-      String(",\"type\":\"") + _config->getValue(CONFIG_TYPE) + "\"";
+      String(",\"type\":\"") + _config->getValue(CONFIG_TYPE) + "\"" +
+      String(",\"version\":\"") + Updater::getFullVersion() + "\"";
     for(uint8_t i = 0; i < 4; i++) {
       state += ",\"lead" + String(i) + "\":" + String((unsigned int)_config->getLeadVal((ConfigKeys)(CONFIG_LEAD1 + i)));
     }
     state += "}";
     sendEncrypted(state);
     return;
+  }
+
+  // Update Firmware
+  if(action == "firmware-update") {
+    Serial.println(F("Firmware update request"));
+    Updater::update(data.c_str());
   }
 }
 

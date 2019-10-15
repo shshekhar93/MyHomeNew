@@ -37,7 +37,7 @@ void setup() {
     return;
   }
   Serial.print("This node AP mac: "); Serial.println(WiFi.softAPmacAddress());
-  Serial.print("This node AP (STA) mac: "); Serial.println(WiFi.macAddress());
+  Serial.print("This node STA mac: "); Serial.println(WiFi.macAddress());
 
   if(WiFi.SSID() != "") {
     WiFi.begin();
