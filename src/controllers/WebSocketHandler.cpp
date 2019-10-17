@@ -152,8 +152,14 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
 
   // Update Firmware
   if(action == "firmware-update") {
-    Serial.println(F("Firmware update request"));
+    Serial.println(F("Firmware update req"));
     Updater::update(data.c_str());
+  }
+
+  // Update SPIFFS
+  if(action == "spiffs-update") {
+    Serial.println(F("SPIFFS update req"));
+    Updater::updateSpiffs(data.c_str());
   }
 }
 

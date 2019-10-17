@@ -1,7 +1,6 @@
 #include "updater.h"
 #include "config/Config.h"
 #include "WiFiClient.h"
-#include "ESP8266httpUpdate.h"
 
 const char MyHomeNew::Updater::m_softVersion[6] = "1.0.1";
 const char MyHomeNew::Updater::m_hardVersion[6] = "E8266";
@@ -10,19 +9,7 @@ String MyHomeNew::Updater::getFullVersion() {
   return String(m_hardVersion) + "-" + String(m_softVersion);
 }
 
-void MyHomeNew::Updater::update(const char* url) {
-  WiFiClient wifiClient;
-  Config* _config = Config::getInstance();
-
-  ESPhttpUpdate.rebootOnUpdate(true);
-  HTTPUpdateResult updateResp = ESPhttpUpdate.update(
-    wifiClient,
-    _config->getValue(CONFIG_HOST),
-    8020,
-    url,
-    getFullVersion()
-  );
-
+void MyHomeNew::Updater::handleUpdateResult(HTTPUpdateResult updateResp) {
   switch (updateResp)
   {
     case HTTP_UPDATE_OK:
@@ -40,4 +27,35 @@ void MyHomeNew::Updater::update(const char* url) {
       Serial.println(F("UNSUP_RET_CODE"));
       break;
   }
+}
+
+void MyHomeNew::Updater::update(const char* url) {
+  WiFiClient wifiClient;
+  Config* _config = Config::getInstance();
+
+  ESPhttpUpdate.rebootOnUpdate(true);
+  HTTPUpdateResult updateResp = ESPhttpUpdate.update(
+    wifiClient,
+    _config->getValue(CONFIG_HOST),
+    8020,
+    url,
+    getFullVersion()
+  );
+
+  handleUpdateResult(updateResp);
+}
+
+
+
+void MyHomeNew::Updater::updateSpiffs(const char* url) {
+  WiFiClient wifiClient;
+  Config* _config = Config::getInstance();
+  ESPhttpUpdate.rebootOnUpdate(true);
+  HTTPUpdateResult updateResp = ESPhttpUpdate.updateSpiffs(
+    wifiClient,
+    String(_config->getValue(CONFIG_HOST)) + String(8020) + String(url),
+    getFullVersion()
+  );
+
+  handleUpdateResult(updateResp);
 }
