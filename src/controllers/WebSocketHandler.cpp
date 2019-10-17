@@ -32,6 +32,7 @@ MyHomeNew::WebSocketHandler* MyHomeNew::WebSocketHandler::getInstance() {
 }
 
 void MyHomeNew::WebSocketHandler::onWSEvent(WStype_t type, uint8_t * payload, size_t length) {
+  WebSocketHandler* _instance = WebSocketHandler::getInstance();
   char* input;
   String key;
   switch (type)
@@ -45,6 +46,9 @@ void MyHomeNew::WebSocketHandler::onWSEvent(WStype_t type, uint8_t * payload, si
     break;
   case WStype_DISCONNECTED:
     Serial.println("WSC_DIS");
+    
+    // Regenerate session key and update headers.
+    _instance->updateHeaders();
 
     if(m_lastDiscTime == 0){
       m_lastDiscTime = millis();
@@ -62,8 +66,7 @@ void MyHomeNew::WebSocketHandler::onWSEvent(WStype_t type, uint8_t * payload, si
     input = new char[length + 1];
     memcpy(input, payload, length);
     input[length] = '\0';
-    key = Config::getInstance()->getValue(CONFIG_AES_KEY);
-    WebSocketHandler::getInstance()->handleEvent(decrypt(input, key.c_str()));
+    _instance->handleEvent(decrypt(input, _instance->m_sessKey));
     delete input;
     break;
   default:
@@ -83,12 +86,27 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
   String action = obj.get<String>("action");
   String data = obj.get<String>("data");
 
+  if(action == "confirm-session") {
+    Serial.println(F("CNF_KEY"));
+    String storedSessKey = byteArrToHexStr(m_sessKey, 16);
+    if(storedSessKey == data) {
+      Serial.print(F("CNF_KEY_SCS"));
+      m_flags |= SESSION_KEY_VERIFIED;
+      sendEncrypted(s_okResp);
+    }
+    sendEncrypted(s_failResp);
+    return;
+  }
+
+  // The server hasn't proven itself yet. don't process anything else.
+  if(!(m_flags | SESSION_KEY_VERIFIED)) {
+    return;
+  }
+
   // Update the key!
   if(action == "update-key") {
-    Serial.println("SET_KEY");
+    Serial.println(F("SET_KEY"));
     _config->setValue(CONFIG_AES_KEY, data.c_str());
-    // Update the header in case we get disconnected.
-    m_client->setExtraHeaders(getHeaders().c_str());
     m_flags |= SHOULD_SAVE_CONFIG;
     sendEncrypted(s_okResp);
     m_cyclesTracker += 2;
@@ -97,7 +115,7 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
 
   // Update the username!
   if(action == "update-username") {
-    Serial.println("SET_USR");
+    Serial.println(F("SET_USR"));
     _config->setValue(CONFIG_USER, data.c_str());
     m_flags |= SHOULD_SAVE_CONFIG;
     sendEncrypted(s_okResp);
@@ -107,7 +125,7 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
 
   // Set state
   if(action == "set-state") {
-    Serial.println("SET_STE");
+    Serial.println(F("SET_STE"));
     uint8_t eqIdx = data.indexOf('=');
     uint8_t devId = data.substring(0, eqIdx).toInt();
     uint8_t brightness = data.substring(eqIdx + 1).toInt();
@@ -120,7 +138,7 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
 
   // Get state
   if(action == "get-state") {
-    Serial.println("GET_STE");
+    Serial.println(F("GET_STE"));
     String state = s_okResp.substring(0, s_okResp.length() - 1) + 
       String(",\"type\":\"") + _config->getValue(CONFIG_TYPE) + "\"" +
       String(",\"version\":\"") + Updater::getFullVersion() + "\"";
@@ -145,7 +163,7 @@ void MyHomeNew::WebSocketHandler::sendEncrypted() {
     return;
   }
 
-  String encrypted = encrypt(m_respStr.c_str(), Config::getInstance()->getValue(CONFIG_AES_KEY));
+  String encrypted = encrypt(m_respStr.c_str(), m_sessKey);
   m_client->sendTXT(encrypted);
   m_respStr = "";
 }
@@ -159,16 +177,21 @@ void MyHomeNew::WebSocketHandler::sendEncrypted(const String& resp) {
   m_cyclesTracker += 4;
 }
 
-String MyHomeNew::WebSocketHandler::getHeaders() {
+void MyHomeNew::WebSocketHandler::updateHeaders() {
   Config* _config = Config::getInstance();
-  String hostname = "myhomenew-" + String(ESP.getChipId(), HEX);
-  String password = encrypt(hostname.c_str(), _config->getValue(CONFIG_AES_KEY));
+
+  m_flags &= ~SESSION_KEY_VERIFIED;
+  generateIV(m_sessKey);
+  String sessionKeyStr = byteArrToHexStr(m_sessKey, 16);
+
+  String payload = "myhomenew-" + String(ESP.getChipId(), HEX) + "|" + sessionKeyStr;
+  String password = encrypt(payload.c_str(), _config->getValue(CONFIG_AES_KEY));
   String auth = "Authorization: " + String(_config->getValue(CONFIG_USER)) + ":" + password;
-  return auth;
+  m_client->setExtraHeaders(auth.c_str());
 }
 
 void MyHomeNew::WebSocketHandler::connect() {
-  m_client->setExtraHeaders(getHeaders().c_str());
+  updateHeaders();
   m_client->begin(Config::getInstance()->getValue(CONFIG_HOST), 8020, "/v1/ws", "myhomenew-device");
   m_client->onEvent(onWSEvent);
   m_client->enableHeartbeat(15000, 4000, 3);

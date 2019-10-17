@@ -3,7 +3,8 @@
 namespace MyHomeNew {
   enum WSFlagDefs {
     SHOULD_SAVE_CONFIG = 0x01,
-    SHOULD_SEND_WS = 0x02
+    SHOULD_SEND_WS = 0x02,
+    SESSION_KEY_VERIFIED = 0x04
   };
 
   class WebSocketHandler {
@@ -15,8 +16,9 @@ namespace MyHomeNew {
     int8_t m_cyclesTracker;
     String m_respStr;
     WebSocketsClient* m_client;
+    uint8_t m_sessKey[16];
     WebSocketHandler();
-    String getHeaders();
+    void updateHeaders();
 
     static void onWSEvent(WStype_t type, uint8_t * payload, size_t length);
     static uint32_t m_lastDiscTime;
