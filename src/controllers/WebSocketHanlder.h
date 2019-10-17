@@ -10,13 +10,14 @@ namespace MyHomeNew {
   class WebSocketHandler {
     static String s_failResp;
     static String s_okResp;
-
     static WebSocketHandler* s_instance;
+
     uint8_t m_flags;
     int8_t m_cyclesTracker;
     String m_respStr;
     WebSocketsClient* m_client;
     uint8_t m_sessKey[16];
+    int32_t m_lastFrameNum;
     WebSocketHandler();
     void updateHeaders();
 

@@ -16,6 +16,7 @@ MyHomeNew::WebSocketHandler::WebSocketHandler() {
   m_cyclesTracker = -1;
   m_client = new WebSocketsClient();
   m_lastDiscTime = 0;
+  m_lastFrameNum = 0;
 }
 
 MyHomeNew::WebSocketHandler::~WebSocketHandler() {
@@ -54,6 +55,7 @@ void MyHomeNew::WebSocketHandler::onWSEvent(WStype_t type, uint8_t * payload, si
       m_lastDiscTime = millis();
     }
     else {
+      delay(1000); // delay for some time.
       // We have not been able to connect for last 5 mins.
       // Simply restart.
       if((millis() - m_lastDiscTime) > 300000ul) {
@@ -74,6 +76,16 @@ void MyHomeNew::WebSocketHandler::onWSEvent(WStype_t type, uint8_t * payload, si
   }
 }
 
+/**
+ * This assumes we are trying to send a JSON object.
+ * Isn't really a problem right now since we only send
+ * objects. Refactor this, if that changes in future.
+ */
+String addFrameNumToJSON(String resp, int frameNum) {
+  return resp.substring(0, resp.length() - 1) +
+    ",\"frame-num\":" + String(frameNum) + "}";
+}
+
 void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
   Config* _config = Config::getInstance();
   StaticJsonBuffer<512> jsonBuffer;
@@ -85,22 +97,40 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
 
   String action = obj.get<String>("action");
   String data = obj.get<String>("data");
+  int frameNum = 0; 
+  
+  if(obj.is<int>("frame-num")) {
+    frameNum = obj.get<int>("frame-num");
+  }
+
+  if(frameNum == 0 || frameNum <= m_lastFrameNum) {
+    return sendEncrypted(s_failResp);
+  }
+
+  // Ideally we should also check if frameNum is about to overflow and restart.
+  // However, 2 billion seems like a high enough number to be safe.
+  m_lastFrameNum = frameNum;
+
+  String sucessWithFrameNum = addFrameNumToJSON(s_okResp, frameNum);
+  String failureWithFrameNum = addFrameNumToJSON(s_failResp, frameNum);
 
   if(action == "confirm-session") {
     Serial.println(F("CNF_KEY"));
     String storedSessKey = byteArrToHexStr(m_sessKey, 16);
     if(storedSessKey == data) {
-      Serial.print(F("CNF_KEY_SCS"));
+      Serial.println(F("CNF_KEY_SCS"));
       m_flags |= SESSION_KEY_VERIFIED;
-      sendEncrypted(s_okResp);
+      sendEncrypted(sucessWithFrameNum);
     }
-    sendEncrypted(s_failResp);
+    else {
+      sendEncrypted(failureWithFrameNum);
+    }
     return;
   }
 
   // The server hasn't proven itself yet. don't process anything else.
   if(!(m_flags | SESSION_KEY_VERIFIED)) {
-    return;
+    return sendEncrypted(failureWithFrameNum);
   }
 
   // Update the key!
@@ -108,7 +138,7 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
     Serial.println(F("SET_KEY"));
     _config->setValue(CONFIG_AES_KEY, data.c_str());
     m_flags |= SHOULD_SAVE_CONFIG;
-    sendEncrypted(s_okResp);
+    sendEncrypted(sucessWithFrameNum);
     m_cyclesTracker += 2;
     return;
   }
@@ -118,7 +148,7 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
     Serial.println(F("SET_USR"));
     _config->setValue(CONFIG_USER, data.c_str());
     m_flags |= SHOULD_SAVE_CONFIG;
-    sendEncrypted(s_okResp);
+    sendEncrypted(sucessWithFrameNum);
     m_cyclesTracker += 2;
     return;
   }
@@ -131,7 +161,7 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
     uint8_t brightness = data.substring(eqIdx + 1).toInt();
     Capabilities::setState(devId, brightness);
     m_flags |= SHOULD_SAVE_CONFIG;
-    sendEncrypted(s_okResp);
+    sendEncrypted(sucessWithFrameNum);
     m_cyclesTracker += 2;
     return;
   }
@@ -140,6 +170,7 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
   if(action == "get-state") {
     Serial.println(F("GET_STE"));
     String state = s_okResp.substring(0, s_okResp.length() - 1) + 
+      String(",\"frame-num\":") + String(frameNum) +
       String(",\"type\":\"") + _config->getValue(CONFIG_TYPE) + "\"" +
       String(",\"version\":\"") + Updater::getFullVersion() + "\"";
     for(uint8_t i = 0; i < 4; i++) {
@@ -187,6 +218,7 @@ void MyHomeNew::WebSocketHandler::updateHeaders() {
   Config* _config = Config::getInstance();
 
   m_flags &= ~SESSION_KEY_VERIFIED;
+  m_lastFrameNum = 0;
   generateIV(m_sessKey);
   String sessionKeyStr = byteArrToHexStr(m_sessKey, 16);
 
