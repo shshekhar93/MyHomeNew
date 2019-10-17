@@ -37,7 +37,7 @@ void MyHomeNew::Updater::update(const char* url) {
   HTTPUpdateResult updateResp = ESPhttpUpdate.update(
     wifiClient,
     _config->getValue(CONFIG_HOST),
-    8020,
+    80,
     url,
     getFullVersion()
   );
@@ -53,7 +53,7 @@ void MyHomeNew::Updater::updateSpiffs(const char* url) {
   ESPhttpUpdate.rebootOnUpdate(true);
   HTTPUpdateResult updateResp = ESPhttpUpdate.updateSpiffs(
     wifiClient,
-    String(_config->getValue(CONFIG_HOST)) + String(8020) + String(url),
+    String(_config->getValue(CONFIG_HOST)) + String(80) + String(url),
     getFullVersion()
   );
 

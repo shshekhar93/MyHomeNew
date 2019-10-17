@@ -230,7 +230,7 @@ void MyHomeNew::WebSocketHandler::updateHeaders() {
 
 void MyHomeNew::WebSocketHandler::connect() {
   updateHeaders();
-  m_client->begin(Config::getInstance()->getValue(CONFIG_HOST), 8020, "/v1/ws", "myhomenew-device");
+  m_client->begin(Config::getInstance()->getValue(CONFIG_HOST), 80, "/v1/ws", "myhomenew-device");
   m_client->onEvent(onWSEvent);
   m_client->enableHeartbeat(15000, 4000, 3);
   m_client->setReconnectInterval(5000);
