@@ -1,52 +1,99 @@
 #include "Config.h"
-#include "../common/StringConstants.h"
 #include "FS.h"
 #include "../common/utils.h"
 
 MyHomeNew::Config* MyHomeNew::Config::s_intance = NULL;
 
-MyHomeNew::Config::Config() {
-  is_configLoaded = false;
-  strcpy(m_ssid, "");
-  strcpy(m_password, "");
-  strcpy(m_stPassword, "");
-  m_isActiveStateLow = false;
+String STATE_FILENAME = "/state.json";
+String LEAD_PREFIX = "lead";
+String READ_MODE = "r";
+String WRITE_MODE = "w";
 
-  File configFile = SPIFFS.open("/config.json", "r");
-  if (!configFile) {
-    Serial.println(FStr(ConfigLoadFailed));
-    return;
+String SETTINGS_FILENAME = "/settings.json";
+String BACKUP_FILENAME = "/backup.json";
+String ACTIVE_STATE_KEY = "active_state";
+
+bool MyHomeNew::Config::loadState() {
+  File stateFile = SPIFFS.open(STATE_FILENAME, READ_MODE.c_str());
+  if(!stateFile) {
+    Serial.println(STATE_FILENAME);
+    Serial.println(FStr(FileOpenFailed));
+    return false;
   }
-
   StaticJsonBuffer<1024> jsonBuffer;
-  JsonObject& config = jsonBuffer.parseObject(configFile);
-
-  if (!config.success()) {
-    Serial.println(FStr(ConfigParseFailed));
-    return;
+  JsonObject& state = jsonBuffer.parseObject(stateFile);
+  if(!state.success()) {
+    Serial.println(STATE_FILENAME);
+    Serial.println(ConfigParseFailed);
+    stateFile.close();
+    return false;
   }
 
-  strcpy(m_ssid, config.get<String>("ssid").c_str());
-  strcpy(m_password, config.get<String>("pass").c_str());
-  strcpy(m_stPassword, config.get<String>("st_pass").c_str());
-  strcpy(m_apMac, config.get<String>("ap_mac").c_str());
-  strcpy(m_stMac, config.get<String>("st_mac").c_str());
-  strcpy(m_type, config.get<String>("type").c_str());
-
-  m_isActiveStateLow = config.get<String>("active_state") == "low";
-  
   for(uint8_t i = 0; i < 4; i++) {
-    String key = "lead" + i;
-    String val = config.get<String>(key);
+    String key = LEAD_PREFIX + i;
+    String val = state.get<String>(key);
     if(!Utils::isInt(val)) {
       m_leads[i] = 0;
       continue;
     }
     m_leads[i] = val.toInt();
   }
+  stateFile.close();
+  return true;
+}
 
-  configFile.close();
-  is_configLoaded = true;
+bool MyHomeNew::Config::loadSettings(String filename) {
+  if(filename == "") {
+    filename = SETTINGS_FILENAME;
+  }
+
+  File settingsFile = SPIFFS.open(filename, READ_MODE.c_str());
+  if(!settingsFile) {
+    Serial.println(SETTINGS_FILENAME);
+    Serial.println(FStr(FileOpenFailed));
+    if(filename != BACKUP_FILENAME) {
+      return loadSettings(BACKUP_FILENAME);
+    }
+    return false;
+  }
+  StaticJsonBuffer<1024> jsonBuffer;
+  JsonObject& settings = jsonBuffer.parseObject(settingsFile);
+  if(!settings.success()) {
+    Serial.println(SETTINGS_FILENAME);
+    Serial.println(ConfigParseFailed);
+    settingsFile.close();
+    if(filename != BACKUP_FILENAME) {
+      return loadSettings(BACKUP_FILENAME);
+    }
+    return false;
+  }
+  strcpy(m_stPassword, settings.get<String>(FStr(ConfKeyStPass)).c_str());
+  strcpy(m_apMac, settings.get<String>(FStr(ConfKeyApMac)).c_str());
+  strcpy(m_stMac, settings.get<String>(FStr(ConfKeyStMac)).c_str());
+  strcpy(m_type, settings.get<String>(FStr(ConfKeyType)).c_str());
+  strcpy(m_host, settings.get<String>(FStr(ConfKeyHost)).c_str());
+  strcpy(m_aesKey, settings.get<String>(FStr(ConfKeyAESKey)).c_str());
+  strcpy(m_user, settings.get<String>(FStr(ConfKeyUser)).c_str());
+  m_isActiveStateLow = settings.get<String>("active_state") == "low";
+
+  settingsFile.close();
+  return true;
+}
+
+MyHomeNew::Config::Config() {
+  is_stateLoaded = false;
+  is_settingsLoaded = false;
+  strcpy(m_apMac, EMPTY_STR);
+  strcpy(m_stMac, EMPTY_STR);
+  strcpy(m_type, EMPTY_STR);
+  strcpy(m_stPassword, EMPTY_STR);
+  strcpy(m_host, EMPTY_STR);
+  strcpy(m_aesKey, EMPTY_STR);
+  strcpy(m_user, EMPTY_STR);
+  m_isActiveStateLow = false;
+
+  is_settingsLoaded = loadSettings();
+  is_stateLoaded = loadState();
 }
 
 MyHomeNew::Config* MyHomeNew::Config::getInstance() {
@@ -58,10 +105,6 @@ MyHomeNew::Config* MyHomeNew::Config::getInstance() {
 
 const char* MyHomeNew::Config::getValue(ConfigKeys key) {
   switch(key) {
-    case CONFIG_SSID:
-      return m_ssid;
-    case CONFIG_PASSWORD:
-      return m_password;
     case CONFIG_ST_PASSWORD:
       return m_stPassword;
     case CONFIG_AP_MAC:
@@ -70,10 +113,16 @@ const char* MyHomeNew::Config::getValue(ConfigKeys key) {
       return m_stMac;
     case CONFIG_TYPE:
       return m_type;
+    case CONFIG_HOST:
+      return m_host;
+    case CONFIG_AES_KEY:
+      return m_aesKey;
+    case CONFIG_USER:
+      return m_user;
     default:
       break;
   }
-  return p_empty;
+  return EMPTY_STR;
 }
 
 uint8_t MyHomeNew::Config::getLeadVal(ConfigKeys key) {
@@ -94,18 +143,22 @@ uint8_t MyHomeNew::Config::getLeadVal(ConfigKeys key) {
 
 MyHomeNew::Config* MyHomeNew::Config::setValue(ConfigKeys key, const char* value) {
   switch(key) {
-    case CONFIG_SSID:
-      strcpy(m_ssid, value);
-      break;
-    case CONFIG_PASSWORD:
-      strcpy(m_password, value);
-      break;
     case CONFIG_ST_PASSWORD:
       strcpy(m_stPassword, value);
+      break;
+    case CONFIG_HOST:
+      strcpy(m_host, value);
+      break;
+    case CONFIG_AES_KEY:
+      strcpy(m_aesKey, value);
+      break;
+    case CONFIG_USER:
+      strcpy(m_user, value);
       break;
     default:
       break;
   }
+  is_settingsDirty = true;
   return this;
 }
 
@@ -127,6 +180,7 @@ MyHomeNew::Config* MyHomeNew::Config::setLeadVal(ConfigKeys key, uint8_t val) {
     default:
       break;
   }
+  is_stateDirty = true;
   return this;
 }
 
@@ -134,33 +188,77 @@ bool MyHomeNew::Config::isActiveStateLow() {
   return m_isActiveStateLow;
 }
 
-bool MyHomeNew::Config::save() {
-  if(is_configLoaded == false) {
+bool MyHomeNew::Config::saveState() {
+  File stateFile = SPIFFS.open(STATE_FILENAME, WRITE_MODE.c_str());
+  if(!stateFile) {
+    Serial.println(STATE_FILENAME);
+    Serial.println(FStr(FileOpenFailed));
     return false;
+  }
+  StaticJsonBuffer<1024> jsonBuffer;
+  JsonObject& state = jsonBuffer.createObject();
+  for(uint8_t i = 0; i < 4; i++) {
+    String key = LEAD_PREFIX + i;
+    state[key] = String((unsigned int)m_leads[i]);
+  }
+  state.printTo(stateFile);
+  stateFile.close();
+  return true;
+}
+
+bool MyHomeNew::Config::saveSettings() {
+  StaticJsonBuffer<1024> jsonBuffer;
+  JsonObject& settingsObject = jsonBuffer.createObject();
+
+  settingsObject[FStr(ConfKeyApMac)]= m_apMac;
+  settingsObject[FStr(ConfKeyStMac)] = m_stMac;
+  settingsObject[FStr(ConfKeyType)] = m_type;
+  settingsObject[FStr(ConfKeyActiveState)] = String(m_isActiveStateLow ? "low" : "high");
+
+  settingsObject[FStr(ConfKeyStPass)] = m_stPassword;
+  settingsObject[FStr(ConfKeyHost)] = m_host;
+  settingsObject[FStr(ConfKeyUser)] = m_user;
+  settingsObject[FStr(ConfKeyAESKey)] = m_aesKey;
+
+  bool retVal = false;
+  File settingsFile = SPIFFS.open(SETTINGS_FILENAME, WRITE_MODE.c_str());
+  if(settingsFile) {
+    settingsObject.printTo(settingsFile);
+    settingsFile.close();
+    retVal = true;
+  }
+  File backupFile = SPIFFS.open(BACKUP_FILENAME, WRITE_MODE.c_str());
+  if(backupFile) {
+    settingsObject.printTo(backupFile);
+    backupFile.close();
+    retVal = retVal && true;
+  }
+  return retVal;
+}
+
+bool MyHomeNew::Config::save() {
+  bool retVal = true;
+  if(is_stateDirty) {
+    is_stateDirty = false;
+    
+    if(is_stateLoaded) {
+      retVal = saveState();
+    } else {
+      retVal = false;
+      Serial.println(F("STA_NLD"));
+    }
   }
   
-  File configFile = SPIFFS.open("/config.json", "w");
-  if (!configFile) {
-    Serial.println(FStr(ConfigLoadFailed));
-    return false;
+  if(is_settingsDirty) {
+    is_settingsDirty = false;
+    if(is_settingsLoaded) {
+      retVal = retVal && saveSettings();
+    }
+    else {
+      retVal = false;
+      Serial.println(F("SET_NLD"));
+    }
   }
-
-  StaticJsonBuffer<1024> jsonBuffer;
-  JsonObject& obj = jsonBuffer.createObject();
-  obj["ssid"] = String(m_ssid);
-  obj["pass"] = String(m_password);
-  obj["st_pass"] = String(m_stPassword);
-  obj["active_state"] = String(m_isActiveStateLow ? "low" : "high");
-  obj["ap_mac"] = String(m_apMac);
-  obj["st_mac"] = String(m_stMac);
-  obj["type"] = String(m_type);
-
-  for(uint8_t i = 0; i < 4; i++) {
-    String key = "lead" + i;
-    obj[key] = String((unsigned int)m_leads[i]);
-  }
-
-  obj.printTo(configFile);
-  configFile.close();
-  return true;
+  
+  return retVal;
 }
