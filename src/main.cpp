@@ -1,4 +1,4 @@
-#define ARDUINOJSON_ENABLE_PROGMEM
+#define ARDUINOJSON_ENABLE_PROGMEM 1
 
 #include <Arduino.h>
 #include "FS.h"

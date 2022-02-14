@@ -88,19 +88,19 @@ String addFrameNumToJSON(String resp, int frameNum) {
 
 void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
   Config* _config = Config::getInstance();
-  StaticJsonBuffer<512> jsonBuffer;
-  JsonObject& obj = jsonBuffer.parseObject(jsonStr);
-  if(!obj.success()) {
+  StaticJsonDocument<512> obj;
+  auto error = deserializeJson(obj, jsonStr);
+  if(error) {
     sendEncrypted(s_failResp);
     return ;
   }
 
-  String action = obj.get<String>("action");
-  String data = obj.get<String>("data");
+  String action = obj["action"];
+  String data = obj["data"];
   int frameNum = 0; 
   
-  if(obj.is<int>("frame-num")) {
-    frameNum = obj.get<int>("frame-num");
+  if(obj["frame-num"].is<int>()) {
+    frameNum = obj["frame-num"].as<int>();
   }
 
   if(frameNum == 0 || frameNum <= m_lastFrameNum) {

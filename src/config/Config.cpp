@@ -20,9 +20,9 @@ bool MyHomeNew::Config::loadState() {
     Serial.println(FStr(FileOpenFailed));
     return false;
   }
-  StaticJsonBuffer<1024> jsonBuffer;
-  JsonObject& state = jsonBuffer.parseObject(stateFile);
-  if(!state.success()) {
+  StaticJsonDocument<1024> state;
+  auto error = deserializeJson(state, stateFile);
+  if(error) {
     Serial.println(STATE_FILENAME);
     Serial.println(ConfigParseFailed);
     stateFile.close();
@@ -31,7 +31,7 @@ bool MyHomeNew::Config::loadState() {
 
   for(uint8_t i = 0; i < 4; i++) {
     String key = LEAD_PREFIX + i;
-    String val = state.get<String>(key);
+    String val = state[key];
     if(!Utils::isInt(val)) {
       m_leads[i] = 0;
       continue;
@@ -56,9 +56,9 @@ bool MyHomeNew::Config::loadSettings(String filename) {
     }
     return false;
   }
-  StaticJsonBuffer<1024> jsonBuffer;
-  JsonObject& settings = jsonBuffer.parseObject(settingsFile);
-  if(!settings.success()) {
+  StaticJsonDocument<1024> settings;
+  auto error = deserializeJson(settings, settingsFile);
+  if(error) {
     Serial.println(SETTINGS_FILENAME);
     Serial.println(ConfigParseFailed);
     settingsFile.close();
@@ -67,14 +67,14 @@ bool MyHomeNew::Config::loadSettings(String filename) {
     }
     return false;
   }
-  strcpy(m_stPassword, settings.get<String>(FStr(ConfKeyStPass)).c_str());
-  strcpy(m_apMac, settings.get<String>(FStr(ConfKeyApMac)).c_str());
-  strcpy(m_stMac, settings.get<String>(FStr(ConfKeyStMac)).c_str());
-  strcpy(m_type, settings.get<String>(FStr(ConfKeyType)).c_str());
-  strcpy(m_host, settings.get<String>(FStr(ConfKeyHost)).c_str());
-  strcpy(m_aesKey, settings.get<String>(FStr(ConfKeyAESKey)).c_str());
-  strcpy(m_user, settings.get<String>(FStr(ConfKeyUser)).c_str());
-  m_isActiveStateLow = settings.get<String>("active_state") == "low";
+  strcpy(m_stPassword, settings[FStr(ConfKeyStPass)].as<String>().c_str());
+  strcpy(m_apMac, settings[FStr(ConfKeyApMac)].as<String>().c_str());
+  strcpy(m_stMac, settings[FStr(ConfKeyStMac)].as<String>().c_str());
+  strcpy(m_type, settings[FStr(ConfKeyType)].as<String>().c_str());
+  strcpy(m_host, settings[FStr(ConfKeyHost)].as<String>().c_str());
+  strcpy(m_aesKey, settings[FStr(ConfKeyAESKey)].as<String>().c_str());
+  strcpy(m_user, settings[FStr(ConfKeyUser)].as<String>().c_str());
+  m_isActiveStateLow = settings["active_state"].as<String>() == "low";
 
   settingsFile.close();
   return true;
@@ -195,20 +195,20 @@ bool MyHomeNew::Config::saveState() {
     Serial.println(FStr(FileOpenFailed));
     return false;
   }
-  StaticJsonBuffer<1024> jsonBuffer;
-  JsonObject& state = jsonBuffer.createObject();
+  StaticJsonDocument<1024> jsonDoc;
+  JsonObject state = jsonDoc.to<JsonObject>();
   for(uint8_t i = 0; i < 4; i++) {
     String key = LEAD_PREFIX + i;
     state[key] = String((unsigned int)m_leads[i]);
   }
-  state.printTo(stateFile);
+  serializeJson(state, stateFile);
   stateFile.close();
   return true;
 }
 
 bool MyHomeNew::Config::saveSettings() {
-  StaticJsonBuffer<1024> jsonBuffer;
-  JsonObject& settingsObject = jsonBuffer.createObject();
+  StaticJsonDocument<1024> jsonDoc;
+  JsonObject settingsObject = jsonDoc.to<JsonObject>();
 
   settingsObject[FStr(ConfKeyApMac)]= m_apMac;
   settingsObject[FStr(ConfKeyStMac)] = m_stMac;
@@ -223,13 +223,13 @@ bool MyHomeNew::Config::saveSettings() {
   bool retVal = false;
   File settingsFile = SPIFFS.open(SETTINGS_FILENAME, WRITE_MODE.c_str());
   if(settingsFile) {
-    settingsObject.printTo(settingsFile);
+    serializeJson(settingsObject, settingsFile);
     settingsFile.close();
     retVal = true;
   }
   File backupFile = SPIFFS.open(BACKUP_FILENAME, WRITE_MODE.c_str());
   if(backupFile) {
-    settingsObject.printTo(backupFile);
+    serializeJson(settingsObject, backupFile);
     backupFile.close();
     retVal = retVal && true;
   }
