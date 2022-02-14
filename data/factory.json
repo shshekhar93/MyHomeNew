@@ -6,5 +6,5 @@
   "aes_key": "",
   "host": "",
   "type": "switch",
-  "active_state": "high"
+  "active_state": "low"
 }

@@ -187,10 +187,10 @@ void MyHomeNew::WebSocketHandler::handleEvent(const String& jsonStr) {
     Updater::update(data.c_str());
   }
 
-  // Update SPIFFS
+  // Update FS
   if(action == "spiffs-update") {
     Serial.println(F("SPIFFS update req"));
-    Updater::updateSpiffs(data.c_str());
+    Updater::updateFS(data.c_str());
   }
 }
 

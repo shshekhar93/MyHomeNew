@@ -1,7 +1,7 @@
 #define ARDUINOJSON_ENABLE_PROGMEM 1
 
 #include <Arduino.h>
-#include "FS.h"
+#include "LittleFS.h"
 #include "IPAddress.h"
 #include <ESP8266WiFi.h>
 
@@ -23,16 +23,16 @@ WebSocketHandler* client = WebSocketHandler::getInstance();
 void setup() {
   wifi_set_sleep_type(MODEM_SLEEP_T);
   Serial.begin(115200);
-  SPIFFS.begin();
+  LittleFS.begin();
   WiFiSetup::setupMacAddress();
   String hostname = "myhomenew-" + String(ESP.getChipId(), HEX);
   WiFi.hostname(hostname);
   Capabilities::setPinMode();
 
-  // Setup spiffs & config
+  // Setup littlefs & config
   Serial.println("");
   Serial.println(FStr(MountingMsg));
-  if (!SPIFFS.begin()) {
+  if (!LittleFS.begin()) {
     Serial.println(FStr(MountingFailed));
     return;
   }

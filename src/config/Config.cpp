@@ -1,5 +1,5 @@
 #include "Config.h"
-#include "FS.h"
+#include "LittleFS.h"
 #include "../common/utils.h"
 
 MyHomeNew::Config* MyHomeNew::Config::s_intance = NULL;
@@ -14,7 +14,7 @@ String BACKUP_FILENAME = "/backup.json";
 String ACTIVE_STATE_KEY = "active_state";
 
 bool MyHomeNew::Config::loadState() {
-  File stateFile = SPIFFS.open(STATE_FILENAME, READ_MODE.c_str());
+  File stateFile = LittleFS.open(STATE_FILENAME, READ_MODE.c_str());
   if(!stateFile) {
     Serial.println(STATE_FILENAME);
     Serial.println(FStr(FileOpenFailed));
@@ -47,7 +47,7 @@ bool MyHomeNew::Config::loadSettings(String filename) {
     filename = SETTINGS_FILENAME;
   }
 
-  File settingsFile = SPIFFS.open(filename, READ_MODE.c_str());
+  File settingsFile = LittleFS.open(filename, READ_MODE.c_str());
   if(!settingsFile) {
     Serial.println(SETTINGS_FILENAME);
     Serial.println(FStr(FileOpenFailed));
@@ -189,7 +189,7 @@ bool MyHomeNew::Config::isActiveStateLow() {
 }
 
 bool MyHomeNew::Config::saveState() {
-  File stateFile = SPIFFS.open(STATE_FILENAME, WRITE_MODE.c_str());
+  File stateFile = LittleFS.open(STATE_FILENAME, WRITE_MODE.c_str());
   if(!stateFile) {
     Serial.println(STATE_FILENAME);
     Serial.println(FStr(FileOpenFailed));
@@ -221,13 +221,13 @@ bool MyHomeNew::Config::saveSettings() {
   settingsObject[FStr(ConfKeyAESKey)] = m_aesKey;
 
   bool retVal = false;
-  File settingsFile = SPIFFS.open(SETTINGS_FILENAME, WRITE_MODE.c_str());
+  File settingsFile = LittleFS.open(SETTINGS_FILENAME, WRITE_MODE.c_str());
   if(settingsFile) {
     serializeJson(settingsObject, settingsFile);
     settingsFile.close();
     retVal = true;
   }
-  File backupFile = SPIFFS.open(BACKUP_FILENAME, WRITE_MODE.c_str());
+  File backupFile = LittleFS.open(BACKUP_FILENAME, WRITE_MODE.c_str());
   if(backupFile) {
     serializeJson(settingsObject, backupFile);
     backupFile.close();

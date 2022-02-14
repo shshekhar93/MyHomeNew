@@ -47,7 +47,7 @@ void MyHomeNew::Updater::update(const char* url) {
 
 
 
-void MyHomeNew::Updater::updateSpiffs(const char* url) {
+void MyHomeNew::Updater::updateFS(const char* url) {
   WiFiClient wifiClient;
   Config* _config = Config::getInstance();
   ESPhttpUpdate.rebootOnUpdate(true);

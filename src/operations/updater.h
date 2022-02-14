@@ -13,7 +13,7 @@ namespace MyHomeNew {
 
     static String getFullVersion();
     static void update(const char*);
-    static void updateSpiffs(const char*);
+    static void updateFS(const char*);
   };
 }
 
